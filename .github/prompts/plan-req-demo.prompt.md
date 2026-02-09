@@ -1,7 +1,7 @@
 ---
 description: "Quick demo: Static Web App requirements (pre-filled values)"
-agent: "Project Planner"
-model: "Claude Opus 4.5"
+agent: "Requirements"
+model: "Claude Opus 4.6"
 tools:
   - edit/createFile
 ---
@@ -15,7 +15,7 @@ All values are pre-filled for quick live demonstration.
 
 | Field           | Value                                        |
 | --------------- | -------------------------------------------- |
-| **Project**     | `contoso-static-demo`                        |
+| **Project**     | `infraops-demo`                              |
 | **Type**        | Static Web Application                       |
 | **Region**      | `westeurope` (Static Web App supported)      |
 | **Environment** | Production                                   |
