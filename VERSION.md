@@ -1,10 +1,10 @@
 # Version Information
 
-**Current Version:** 5.1.0
+**Current Version:** 0.9.0
 
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-02-12
 
-**Build:** 8b9dc23
+**Build:** pre-production-reversion
 
 ## Version History
 
@@ -22,9 +22,9 @@ This project follows [Semantic Versioning 2.0.0](https://semver.org/):
 
 Version bumps are automated via GitHub Actions based on [Conventional Commits](https://www.conventionalcommits.org/):
 
-| Commit Type | Version Bump | Example |
-|-------------|--------------|---------|
-| `feat:` | Minor | `feat: add new agent` |
-| `fix:` | Patch | `fix: correct typo` |
-| `feat!:` or `BREAKING CHANGE:` | Major | `feat!: redesign workflow` |
-| `docs:`, `chore:`, etc. | None | `docs: update README` |
+| Commit Type                    | Version Bump | Example                    |
+| ------------------------------ | ------------ | -------------------------- |
+| `feat:`                        | Minor        | `feat: add new agent`      |
+| `fix:`                         | Patch        | `fix: correct typo`        |
+| `feat!:` or `BREAKING CHANGE:` | Major        | `feat!: redesign workflow` |
+| `docs:`, `chore:`, etc.        | None         | `docs: update README`      |

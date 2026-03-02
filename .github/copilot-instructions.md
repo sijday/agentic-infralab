@@ -1,114 +1,96 @@
 # Agentic InfraOps - Copilot Instructions
 
-> Azure infrastructure engineered by agents. Verified. Well-Architected. Deployable.
+> VS Code Copilot-specific orchestration instructions.
+> For general project conventions, build commands, and code style, see the root `AGENTS.md`.
 
-## Quick Reference
+## Quick Start
 
-| Rule                | Value                                                              |
-| ------------------- | ------------------------------------------------------------------ |
-| **Default Region**  | `swedencentral` (alt: `germanywestcentral`)                        |
-| **Unique Names**    | `var uniqueSuffix = uniqueString(resourceGroup().id)` in main.bicep |
-| **Key Vault**       | ≤24 chars: `kv-{short}-{env}-{suffix}`                             |
-| **Storage Account** | ≤24 chars, lowercase+numbers only, NO hyphens                      |
-| **SQL Server**      | ≤63 chars, Azure AD-only auth required                             |
-| **Zone Redundancy** | App Service Plans: P1v4+ (not S1/P1v2)                             |
-| **Commits**         | Conventional Commits: `feat:`, `fix:`, `docs:`, `chore:`           |
+1. Enable subagents: `"github.copilot.chat": { "customAgentInSubagent": { "enabled": true } }`
+2. Open Chat (`Ctrl+Shift+I`) → Select **InfraOps Conductor** → Describe your project
+3. The Conductor guides you through all 7 steps with approval gates
 
-## Architecture
+## 7-Step Workflow
 
-```text
-.github/
-├── agents/*.agent.md          # 8 custom agents (project-planner → workload-docs)
-├── agents/_shared/defaults.md # Single source: regions, tags, naming, SKUs
-├── instructions/*.md          # File-type rules (auto-applied by applyTo glob)
-├── templates/*.template.md    # Canonical artifact structures (01-07)
-└── prompts/*.prompt.md        # Reusable prompts
-agent-output/{project}/        # Generated artifacts (01-requirements.md → 07-*.md)
-infra/bicep/{project}/         # Generated Bicep: main.bicep, modules/, deploy.ps1
-mcp/azure-pricing-mcp/         # Azure Pricing MCP server (auto-configured)
-```
+| Step | Agent                                                                      | Output                                                                                                    | Review | Gate       |
+| ---- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ---------- |
+| 1    | Requirements                                                               | `01-requirements.md`                                                                                      | 1x     | Approval   |
+| 2    | Architect                                                                  | `02-architecture-assessment.md` + cost estimate                                                           | 3x+1x  | Approval   |
+| 3    | Design (opt)                                                               | `03-des-*.{py,png,md}`                                                                                    | —      | —          |
+| 4    | IaC Plan (Bicep: `05b-Bicep Planner` / Terraform: `05t-Terraform Planner`) | `04-implementation-plan.md` + governance + `04-dependency-diagram.py/.png` + `04-runtime-diagram.py/.png` | 1x+3x  | Approval   |
+| 5    | IaC Code (Bicep: `06b-Bicep CodeGen` / Terraform: `06t-Terraform CodeGen`) | `infra/bicep/{project}/` or `infra/terraform/{project}/`                                                  | 3x     | Validation |
+| 6    | Deploy (Bicep: `07b-Bicep Deploy` / Terraform: `07t-Terraform Deploy`)     | `06-deployment-summary.md`                                                                                | 1x     | Approval   |
+| 7    | As-Built                                                                   | `07-*.md` documentation suite                                                                             | —      | —          |
 
-## Seven-Step Workflow
+All outputs → `agent-output/{project}/`. Context flows via artifact files + handoffs.
+Review column = adversarial passes by `challenger-review-subagent` (3x = rotating lenses; 1x = comprehensive).
 
-| Step | Agent                       | Output                      | MCP |
-| ---- | --------------------------- | --------------------------- | --- |
-| 1    | `project-planner`           | `01-requirements.md`        |     |
-| 2    | `azure-principal-architect` | `02-architecture-*.md`      | 💰  |
-| 3    | `diagram-generator`         | `03-des-*.py/.png`          |     |
-| 4    | `bicep-plan`                | `04-implementation-plan.md` | 💰  |
-| 5    | `bicep-implement`           | `infra/bicep/{project}/`    |     |
-| 6    | `deploy`                    | `06-deployment-summary.md`  |     |
-| 7    | `workload-documentation-*`  | `07-*.md` (6 files)         |     |
+## Skills (Auto-Invoked by Agents)
 
-**Usage**: `Ctrl+Alt+I` → select agent → prompt → approve before next step
+| Skill                      | Purpose                                                               |
+| -------------------------- | --------------------------------------------------------------------- |
+| `azure-defaults`           | Regions, tags, naming, AVM, security, governance, pricing             |
+| `azure-artifacts`          | Template H2 structures, styling, generation rules                     |
+| `azure-bicep-patterns`     | Reusable Bicep patterns (hub-spoke, PE, diagnostics)                  |
+| `azure-troubleshooting`    | KQL templates, health checks, remediation playbooks                   |
+| `azure-diagrams`           | Python architecture diagram generation                                |
+| `azure-adr`                | Architecture Decision Records                                         |
+| `github-operations`        | GitHub issues, PRs, CLI, Actions, releases                            |
+| `git-commit`               | Commit message conventions                                            |
+| `docs-writer`              | Documentation generation                                              |
+| `make-skill-template`      | Scaffold new Agent Skills from templates                              |
+| `microsoft-docs`           | Query official Microsoft/Azure docs (requires Learn MCP)              |
+| `microsoft-code-reference` | Verify SDK methods and find working code samples (requires Learn MCP) |
+| `microsoft-skill-creator`  | Create hybrid skills for Microsoft technologies (requires Learn MCP)  |
+| `terraform-patterns`       | Terraform HCL patterns (hub-spoke, PE, diagnostics, AVM pitfalls)     |
 
-## Bicep Patterns
+Agents read skills via: **"Read `.github/skills/{name}/SKILL.md`"** in their body.
 
-```bicep
-// main.bicep - Generate uniqueSuffix ONCE, pass to ALL modules
-var uniqueSuffix = uniqueString(resourceGroup().id)
-var tags = {
-  Environment: environment   // dev, staging, prod
-  ManagedBy: 'Bicep'
-  Project: projectName
-  Owner: owner
-}
+## Chat Triggers
 
-// Storage: lowercase+numbers only, NO hyphens
-var storageName = 'st${take(replace(projectName, '-', ''), 10)}${take(uniqueSuffix, 8)}'
+- If a user message starts with `gh`, treat it as a GitHub operation.
+  Examples: `gh pr create ...`, `gh workflow run ...`, `gh api ...`.
+- Automatically follow the `github-operations` skill guidance (MCP-first, `gh` CLI fallback) from `.github/skills/github-operations/SKILL.md`.
 
-// Key Vault: ≤24 chars with hyphens OK
-var kvName = 'kv-${take(projectName, 8)}-${environment}-${take(uniqueSuffix, 6)}'
-```
+### GitHub MCP Priority (Mandatory)
 
-### Security Defaults (Azure Policy Compliance)
+- For issues and pull requests, always prefer GitHub MCP tools over `gh` CLI.
+- Only use `gh` for operations that have no equivalent MCP write tool in the current environment.
+- In devcontainers, do not run `gh auth` commands unless the user explicitly asks for CLI authentication troubleshooting.
 
-```bicep
-// Storage - always set these
-properties: {
-  supportsHttpsTrafficOnly: true
-  minimumTlsVersion: 'TLS1_2'
-  allowBlobPublicAccess: false
-  allowSharedKeyAccess: false  // Use managed identity
-}
+## Key Conventions
 
-// SQL Server - Azure AD-only auth required
-properties: {
-  administrators: {
-    azureADOnlyAuthentication: true
-    login: sqlAdminGroupName
-    sid: sqlAdminGroupObjectId
-  }
-}
-```
+See the root `AGENTS.md` for full conventions. Summary of VS Code-specific overrides:
 
-## Commands
+- **AVM-first**: Always prefer Azure Verified Modules over raw Bicep/Terraform
+- **Governance**: Always check `04-governance-constraints.md` for subscription-level Azure Policy
 
-```bash
-# Validation (runs automatically on commit)
-bicep build infra/bicep/{project}/main.bicep
-npm run lint:md                    # Markdown linting
-npm run lint:md:fix                # Auto-fix markdown issues
-npm run lint:artifact-templates    # Validate artifact structure
+Full details in `.github/skills/azure-defaults/SKILL.md`.
 
-# Deployment
-cd infra/bicep/{project}
-pwsh -File deploy.ps1 -WhatIf     # Preview changes
-pwsh -File deploy.ps1             # Execute deployment
-```
+### Terraform Conventions
 
-## Conventions
-
-- **Artifacts follow templates**: `agent-output/{project}/0X-*.md` must match `.github/templates/0X-*.template.md`
-- **Instructions auto-apply**: `.github/instructions/*.instructions.md` apply via `applyTo` glob patterns
-- **AVM-first**: Use Azure Verified Modules when available (`br/public:avm/res/...`)
-- **Deploy scripts**: Always include `[CmdletBinding(SupportsShouldProcess)]` + `$WhatIfPreference`
+Full details in `.github/skills/terraform-patterns/SKILL.md` and root `AGENTS.md`.
 
 ## Key Files
 
-| Purpose              | File                                 |
-| -------------------- | ------------------------------------ |
-| Shared defaults      | `.github/agents/_shared/defaults.md` |
-| Bicep best practices | `.github/instructions/bicep-*.md`    |
-| Artifact templates   | `.github/templates/*.template.md`    |
-| Troubleshooting      | `docs/guides/troubleshooting.md`     |
+| Path                              | Purpose                                                 |
+| --------------------------------- | ------------------------------------------------------- |
+| `AGENTS.md`                       | Cross-agent project conventions and commands            |
+| `.github/agents/*.agent.md`       | Agent definitions                                       |
+| `.github/skills/*/SKILL.md`       | Reusable skill knowledge                                |
+| `.github/instructions/`           | File-type rules (Bicep, Markdown, etc.)                 |
+| `agent-output/{project}/`         | Agent-generated artifacts                               |
+| `infra/bicep/{project}/`          | Bicep templates                                         |
+| `mcp/azure-pricing-mcp/`          | Azure Pricing MCP server                                |
+| `.vscode/mcp.json`                | MCP server configuration                                |
+| `.vscode/infraops.toolsets.jsonc` | Workspace tool groups for interactive chat (8 toolsets) |
+| `infra/terraform/{project}/`      | Terraform templates by project                          |
+| `docs/tf-support/`                | Terraform support planning docs and prompts             |
+
+## Validation
+
+See `AGENTS.md` for full build and validation commands. Quick reference:
+
+```bash
+npm run validate:all
+npm run lint:md
+```
